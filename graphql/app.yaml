@@ -34,7 +34,7 @@ skip_files:
 # custom additions
 - ^(config/test\.py)$
 - ^(config/development\.py)$
-- ^(dev_data/.*)$
+- ^(fixtures/.*)$
 - ^(app/conftest\.py)$
 - ^(app/fix_sys_path\.py)$
 - ^(app/.*_test\.py)$
