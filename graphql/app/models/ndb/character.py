@@ -46,6 +46,10 @@ class Character(ndb.Model):
         return ndb.get_multi(fof_keys)
 
     @classmethod
+    def get_by_name(cls, name):
+        return cls.query(cls.name == name).get()
+
+    @classmethod
     @ndb.transactional
     def create(cls, **kwargs):
         cls.ensure_name_not_in_datastore(kwargs.get('name'))

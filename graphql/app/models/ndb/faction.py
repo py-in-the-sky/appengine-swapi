@@ -10,5 +10,10 @@ class Faction(ndb.Model):
     updated = ndb.DateTimeProperty(required=True, auto_now=True)
 
     def get_characters(self):
+        "Return characters in faction in alphabetical order."
         q = Character.query(Character.faction_key == self.key).order(Character.name)
         return q.fetch()
+
+    @classmethod
+    def get_by_name(cls, name):
+        return cls.query(cls.name == name).get()

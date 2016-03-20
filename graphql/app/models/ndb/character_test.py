@@ -119,3 +119,8 @@ def test_create_friendship(rey, finn, leia):
     assert ch2.friend_keys == leia.friend_keys + [rey.key]
     leia2 = leia.key.get()
     assert ch2.friend_keys == leia2.friend_keys
+
+
+def test_get_by_name(rey):
+    assert Character.get_by_name(rey.name) == rey
+    assert Character.get_by_name('Chewie') is None

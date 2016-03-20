@@ -1,3 +1,4 @@
+from app.models.ndb.faction import Faction
 from app.models.ndb.character import Character
 
 
@@ -15,3 +16,9 @@ def test_get_characters(resistance, first_order):
     resistance_names2 = [c.name for c in resistance.get_characters()]
 
     assert resistance_names2 == ['Chewie'] + resistance_names
+
+
+def test_get_by_name(resistance, first_order):
+    assert Faction.get_by_name(resistance.name) == resistance
+    assert Faction.get_by_name(first_order.name) == first_order
+    assert Faction.get_by_name('The Galactic Empire') is None
