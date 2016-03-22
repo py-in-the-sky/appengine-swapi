@@ -54,7 +54,9 @@ class Character(ndb.Model):
     def create(cls, **kwargs):
         cls.ensure_name_not_in_datastore(kwargs.get('name'))
 
-        character_key = cls(parent=root, **kwargs).put()
+        properties = Character._properties
+        input = {k:v for k,v in kwargs.iteritems() if k in properties}
+        character_key = cls(parent=root, **input).put()
         new_character = character_key.get()
         return new_character
 

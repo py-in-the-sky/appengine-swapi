@@ -1,11 +1,12 @@
 import graphene
+from graphene import relay
 
 from app.models.ndb.character import Character as NdbCharacter
 from .custom_types.scalar import NdbKey
 from .query import Character
 
 
-class CreateCharacter(graphene.Mutation):
+class CreateCharacter(relay.ClientIDMutation):
     class Input:
         name = graphene.String().NonNull
         description = graphene.String()
@@ -15,15 +16,15 @@ class CreateCharacter(graphene.Mutation):
     character = graphene.NonNull(Character)
 
     @classmethod
-    def mutate(cls, instance, args, info):
-        character = NdbCharacter.create(**args)
+    def mutate_and_get_payload(cls, input, info):
+        character = NdbCharacter.create(**input)
         return cls(
-            character=Character.from_ndb_entity(character),
-            ok=bool(character)
+            ok=bool(character),
+            character=Character.from_ndb_entity(character)
         )
 
 
-class CreateFriendship(graphene.Mutation):
+class CreateFriendship(relay.ClientIDMutation):
     class Input:
         character_key_1 = graphene.NonNull(NdbKey)
         character_key_2 = graphene.NonNull(NdbKey)
@@ -33,10 +34,10 @@ class CreateFriendship(graphene.Mutation):
     character_2 = graphene.NonNull(Character)
 
     @classmethod
-    def mutate(cls, instance, args, info):
+    def mutate_and_get_payload(cls, input, info):
         character_1, character_2 = NdbCharacter.create_friendship(
-            args['character_key_1'],
-            args['character_key_2']
+            input['character_key_1'],
+            input['character_key_2']
         )
         return cls(
             ok=bool(character_1) and bool(character_2),
@@ -45,7 +46,7 @@ class CreateFriendship(graphene.Mutation):
         )
 
 
-class UpdateCharacter(graphene.Mutation):
+class UpdateCharacter(relay.ClientIDMutation):
     class Input:
         key = graphene.NonNull(NdbKey)
         description = graphene.String()
@@ -54,11 +55,11 @@ class UpdateCharacter(graphene.Mutation):
     character = graphene.NonNull(Character)
 
     @classmethod
-    def mutate(cls, instance, args, info):
-        character = args['key'].get()
+    def mutate_and_get_payload(cls, input, info):
+        character = input['key'].get()
 
-        if 'description' in args:
-            new_description = args['description']
+        if 'description' in input:
+            new_description = input['description']
             character.description = new_description
 
         character.put()

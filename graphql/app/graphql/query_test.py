@@ -1,51 +1,91 @@
+import pytest
+
 from . import schema
 
 
-def test_query(fixtures):
-    query_template = '''
+@pytest.fixture(scope='function')
+def query_template():
+    return '''
         query {
-            %s(name: "%s") {
+            %s(%s: "%s") {
                 %s
             }
         }
     '''
 
-    result = schema.execute(query_template % ('faction', 'The First Order', 'name'))
+
+@pytest.fixture(scope='function')
+def query_fragment():
+    return '''
+        ... on Character {
+            name
+        }
+    '''
+
+
+def test_object_identification(fixtures, query_template, query_fragment):
+    result = schema.execute(query_template % ('character', 'name', 'Rey', 'name\nid'))
+
+    assert not result.errors
+
+    rey_relay_id = result.data['character']['id']
+
+    assert result.data == {
+        'character': {
+            'id': rey_relay_id,
+            'name': 'Rey'
+        }
+    }
+
+    query_body = 'id \n %s' % query_fragment
+    result = schema.execute(query_template % ('node', 'id', rey_relay_id, query_body))
+
+    assert not result.errors
+    assert result.data == {
+        'node': {
+            'id': rey_relay_id,
+            'name': 'Rey'
+        }
+    }
+
+
+def test_object_identification_failure(fixtures, query_template, query_fragment):
+    query_body = 'id \n %s' % query_fragment
+    result = schema.execute(query_template % ('node', 'id', 'bad-id', query_body))
+
+    assert not result.errors
+    assert result.data == { 'node': None }
+
+
+def test_query(fixtures, query_template):
+    result = schema.execute(query_template % ('faction', 'name', 'The First Order', 'name'))
 
     assert not result.errors
     assert result.data == { "faction": { "name": "The First Order" } }
 
-    result = schema.execute(query_template % ('faction', 'The Galactic Empire', 'name'))
+    result = schema.execute(query_template % ('faction', 'name', 'The Galactic Empire', 'name'))
 
     assert not result.errors
     assert result.data == { "faction": None }
 
-    result = schema.execute(query_template % ('character', 'Han', 'description'))
+    result = schema.execute(query_template % ('character', 'name', 'Han', 'description'))
 
     assert not result.errors
     assert result.data == { "character": { "description": "Captain of the Millennium Falcon." } }
 
-    result = schema.execute(query_template % ('character', 'Chewie', 'name'))
+    result = schema.execute(query_template % ('character', 'name', 'Chewie', 'name'))
 
     assert not result.errors
     assert result.data == { "character": None }
 
 
-def test_query_by_key(resistance, rey):
-    query_template = '''
-        query {
-            %s(key: "%s") {
-                name
-            }
-        }
-    '''
-
-    result = schema.execute(query_template % ('character', rey.key.urlsafe()))
+def test_query_by_key(resistance, rey, query_template):
+    result = schema.execute(query_template % ('character', 'key', rey.key.urlsafe(), 'name'))
 
     assert not result.errors
     assert result.data == { "character": { "name": "Rey" } }
 
-    result = schema.execute(query_template % ('faction', resistance.key.urlsafe()))
+    result = schema.execute(query_template % ('faction', 'key', resistance.key.urlsafe(), 'name'))
 
     assert not result.errors
     assert result.data == { "faction": { "name": "The Resistance" } }
@@ -57,32 +97,8 @@ def test_query_complex(fixtures):
             faction(name: "The First Order") {
                 name
                 characters {
-                    name
-                }
-            }
-        }
-    ''')
-
-    assert not result.errors
-    assert result.data == {
-        "faction": {
-            "name": "The First Order",
-            "characters": [
-                { "name": "Kylo" },
-                { "name": "Snoke" }
-            ]
-        }
-    }
-
-    result = schema.execute('''
-        query {
-            faction(name: "The Resistance") {
-                name
-                characters {
-                    name
-                    suggested {
-                        name
-                        faction {
+                    edges {
+                        node {
                             name
                         }
                     }
@@ -94,43 +110,105 @@ def test_query_complex(fixtures):
     assert not result.errors
     assert result.data == {
         "faction": {
-            "name": "The Resistance",
-            "characters": [
-                {
-                    "name": "Finn",
-                    "suggested": [
-                        {
-                        "name": "Leia",
-                            "faction": { "name": "The Resistance" }
+            "name": "The First Order",
+            "characters": {
+                "edges": [
+                    { "node": { "name": "Kylo" } },
+                    { "node": { "name": "Snoke" } }
+                ]
+            }
+        }
+    }
+
+    result = schema.execute('''
+        query {
+            faction(name: "The Resistance") {
+                name
+                characters {
+                    edges {
+                        node {
+                            name
+                            suggested {
+                                edges {
+                                    node {
+                                        name
+                                        faction {
+                                            name
+                                        }
+                                    }
+                                }
+                            }
                         }
-                    ]
-                },
-                {
-                    "name": "Han",
-                    "suggested": []
-                },
-                {
-                    "name": "Leia",
-                    "suggested": [
-                        {
-                            "name": "Finn",
-                            "faction": { "name": "The Resistance" }
-                        },
-                        {
-                            "name": "Rey",
-                            "faction": { "name": "The Resistance" }
-                        }
-                    ]
-                },
-                {
-                    "name": "Rey",
-                    "suggested": [
-                        {
-                            "name": "Leia",
-                            "faction": { "name": "The Resistance" }
-                        }
-                    ]
+                    }
                 }
-            ]
+            }
+        }
+    ''')
+
+    assert not result.errors
+    assert result.data == {
+        "faction": {
+            "name": "The Resistance",
+            "characters": {
+                "edges": [
+                    {
+                        "node": {
+                            "name": "Finn",
+                            "suggested": {
+                                "edges": [
+                                    {
+                                        "node": {
+                                            "name": "Leia",
+                                            "faction": { "name": "The Resistance" }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "node": {
+                            "name": "Han",
+                            "suggested": { "edges": [] }
+                        }
+                    },
+                    {
+                        "node": {
+                            "name": "Leia",
+                            "suggested": {
+                                "edges": [
+                                    {
+                                        "node": {
+                                            "name": "Finn",
+                                            "faction": { "name": "The Resistance" }
+                                        }
+                                    },
+                                    {
+                                        "node": {
+                                            "name": "Rey",
+                                            "faction": { "name": "The Resistance" }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "node": {
+                            "name": "Rey",
+                            "suggested": {
+                                "edges": [
+                                    {
+                                        "node": {
+                                            "name": "Leia",
+                                            "faction": { "name": "The Resistance" }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
         }
     }

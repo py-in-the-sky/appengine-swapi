@@ -7,7 +7,8 @@ from . import schema
 def create_friendship_template():
     return '''
         mutation {
-            createFriendship(characterKey1: "%s", characterKey2: "%s") {
+            createFriendship(input: { clientMutationId: "abc", characterKey1: "%s", characterKey2: "%s" }) {
+                clientMutationId
                 ok
                 character1 {
                     name
@@ -24,10 +25,12 @@ def create_friendship_template():
 def create_character_template():
     return '''
         mutation {
-            createCharacter(name: "%s", factionKey: "%s") {
+            createCharacter(input: { clientMutationId: "abc", name: "%s", factionKey: "%s" }) {
+                clientMutationId
                 ok
                 character {
                     name
+                    description
                     faction {
                         name
                     }
@@ -41,9 +44,11 @@ def create_character_template():
 def update_character_template():
     return '''
         mutation {
-            updateCharacter(description: %s, key: "%s") {
+            updateCharacter(input: { clientMutationId: "abc", description: %s, key: "%s" }) {
+                clientMutationId
                 ok
                 character {
+                    name
                     description
                 }
             }
@@ -51,24 +56,36 @@ def update_character_template():
     '''
 
 
-def test_create_friendship(rey, leia, create_friendship_template):
-    mutation = create_friendship_template % (rey.key.urlsafe(), leia.key.urlsafe())
-    query = '''
+@pytest.fixture(scope='function')
+def friends_and_suggested_query():
+    return '''
         query {
             character(name: "Rey") {
                 friends {
-                    name
+                    edges {
+                        node {
+                            name
+                        }
+                    }
                 }
                 suggested {
-                    name
+                    edges {
+                        node {
+                            name
+                        }
+                    }
                 }
             }
         }
     '''
 
-    names = lambda field, result: [character['name'] for character in result.data['character'][field]]
 
-    result = schema.execute(query)
+def test_create_friendship(rey, leia, create_friendship_template, friends_and_suggested_query):
+    mutation = create_friendship_template % (rey.key.urlsafe(), leia.key.urlsafe())
+
+    names = lambda field, result: [character['node']['name'] for character in result.data['character'][field]['edges']]
+
+    result = schema.execute(friends_and_suggested_query)
 
     assert not result.errors
     assert names('friends', result) == ['Finn', 'Han']
@@ -81,7 +98,7 @@ def test_create_friendship(rey, leia, create_friendship_template):
     assert result.data['createFriendship']['character1']['name'] == 'Rey'
     assert result.data['createFriendship']['character2']['name'] == 'Leia'
 
-    result = schema.execute(query)
+    result = schema.execute(friends_and_suggested_query)
 
     assert not result.errors
     assert names('friends', result) == ['Finn', 'Han', 'Leia']
@@ -103,9 +120,11 @@ def test_create_character(resistance, create_character_template):
     assert not result.errors
     assert result.data == {
         'createCharacter': {
+            'clientMutationId': 'abc',
             'ok': True,
             'character': {
                 'name': 'C3PO',
+                'description': None,
                 'faction': {
                     'name': resistance.name
                 }
@@ -140,8 +159,10 @@ def test_update_character(rey, update_character_template):
     assert not result.errors
     assert result.data == {
         'updateCharacter': {
+            'clientMutationId': 'abc',
             'ok': True,
             'character': {
+                'name': 'Rey',
                 'description': 'New captain of the Millennium Falcon.'
             }
         }
@@ -157,4 +178,4 @@ def test_update_character_failure(rey, update_character_template):
 
     assert rey.key.get().description == 'A new awakening in the Force.'
     assert not result.data
-    assert result.errors[0].message == 'Argument "description" has invalid value 1.\nExpected type "String", found 1.'
+    assert 'In field "description": Expected type "String", found 1.' in result.errors[0].message

@@ -1,19 +1,20 @@
 import graphene
+from graphene import relay
 
 from app.models.ndb.faction import Faction as NdbFaction
 from app.models.ndb.character import Character as NdbCharacter
-from .custom_types.compound import NdbObjectType
+from .custom_types.compound import NdbNodeMixin
 from .custom_types.scalar import DateTime, NdbKey
 
 
-class Character(NdbObjectType):
+class Character(relay.Node, NdbNodeMixin):
     name = graphene.String().NonNull
     description = graphene.String()
     created = graphene.NonNull(DateTime)
     updated = graphene.NonNull(DateTime)
-    friends = graphene.List('Character').NonNull
-    suggested = graphene.List('Character').NonNull
     faction = graphene.NonNull('Faction')
+    friends = relay.ConnectionField('Character')
+    suggested = relay.ConnectionField('Character')
 
     def resolve_friends(self, args, info):
         friends = self.key.get().get_friends()
@@ -28,12 +29,12 @@ class Character(NdbObjectType):
         return Faction.from_ndb_entity(faction)
 
 
-class Faction(NdbObjectType):
+class Faction(relay.Node, NdbNodeMixin):
     name = graphene.String().NonNull
     description = graphene.String()
     created = graphene.NonNull(DateTime)
     updated = graphene.NonNull(DateTime)
-    characters = graphene.List(Character).NonNull
+    characters = relay.ConnectionField(Character)
 
     def resolve_characters(self, args, info):
         characters = self.key.get().get_characters()
@@ -46,13 +47,14 @@ class Query(graphene.ObjectType):
         key=graphene.Argument(NdbKey),
         name=graphene.String(),
     )
-    factions = graphene.List(Faction).NonNull
+    factions = relay.ConnectionField(Faction)
     character = graphene.Field(
         Character,
         key=graphene.Argument(NdbKey),
         name=graphene.String(),
     )
-    characters = graphene.List(Character).NonNull
+    characters = relay.ConnectionField(Character)
+    node = relay.NodeField()
 
     def resolve_faction(self, args, info):
         faction_key = args.get('key')
