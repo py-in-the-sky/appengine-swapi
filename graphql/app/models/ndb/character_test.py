@@ -10,18 +10,18 @@ def test_faction_key(rey):
 
 
 def test_get_friends(rey, leia):
-    friend_names = [f.name for f in rey.get_friends()]
+    friend_names = [f.name for f in rey.get_friends().get_result()]
 
     assert friend_names == ['Finn', 'Han']
 
     Character.create_friendship(rey.key, leia.key)
-    friend_names = [f.name for f in rey.get_friends()]
+    friend_names = [f.name for f in rey.get_friends().get_result()]
 
     assert friend_names == ['Finn', 'Han', 'Leia']
 
 
 def test_get_friends_of_friends(rey, leia, r2d2, han, chewie):
-    fof_names = lambda character: [fof.name for fof in character.get_friends_of_friends()]
+    fof_names = lambda character: [fof.name for fof in character.get_friends_of_friends().get_result()]
 
     _, r2d2 = Character.create_friendship(leia.key, r2d2.key)
 
@@ -122,5 +122,5 @@ def test_create_friendship(rey, finn, leia):
 
 
 def test_get_by_name(rey):
-    assert Character.get_by_name(rey.name) == rey
-    assert Character.get_by_name('Chewie') is None
+    assert Character.get_by_name(rey.name).get_result() == rey
+    assert Character.get_by_name('Chewie').get_result() is None

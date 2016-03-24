@@ -12,8 +12,8 @@ class Faction(ndb.Model):
     def get_characters(self):
         "Return characters in faction in alphabetical order."
         q = Character.query(Character.faction_key == self.key).order(Character.name)
-        return q.fetch()
+        return q.fetch_async()
 
     @classmethod
     def get_by_name(cls, name):
-        return cls.query(cls.name == name).get()
+        return cls.query(cls.name == name).get_async()

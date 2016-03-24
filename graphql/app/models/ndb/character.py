@@ -17,19 +17,20 @@ class Character(ndb.Model):
         "Return friends in alphabetical order."
         cls = self.__class__
         q = cls.query(cls.friend_keys == self.key).order(cls.name)
-        return q.fetch()
+        return q.fetch_async()
 
+    @ndb.tasklet
     def get_friends_of_friends(self):
         """
         Return friends of friends in alphabetical order.
         Return value does not include self or friends.
         """
         if not self.friend_keys:
-            return []
+            raise ndb.Return([])
 
         cls = self.__class__
         q = cls.query(cls.friend_keys.IN(self.friend_keys)).order(cls.name)
-        superset_keys = q.fetch(keys_only=True)
+        superset_keys = yield q.fetch_async(keys_only=True)
         fof_keys = [k for k in superset_keys if k != self.key and k not in self.friend_keys]
         # NB: For scalability, the keys of friends-of-friends for each character
         # should be periodically calculated and stored in the datastore by a cron job.
@@ -41,13 +42,14 @@ class Character(ndb.Model):
         # response to a user request.
 
         if not fof_keys:
-            return []
+            raise ndb.Return([])
 
-        return ndb.get_multi(fof_keys)
+        friends_of_friends = yield ndb.get_multi_async(fof_keys)
+        raise ndb.Return(friends_of_friends)
 
     @classmethod
     def get_by_name(cls, name):
-        return cls.query(cls.name == name).get()
+        return cls.query(cls.name == name).get_async()
 
     @classmethod
     @ndb.transactional

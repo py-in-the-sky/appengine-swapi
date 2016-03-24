@@ -1,4 +1,5 @@
 import graphene
+from graphene import relay
 from google.appengine.ext import ndb
 
 from .scalar import NdbKey
@@ -32,3 +33,13 @@ class NdbNodeMixin(graphene.Interface):
     def get_node(cls, ndb_key_string, info):
         entity = ndb.Key(urlsafe=ndb_key_string).get()
         return cls.from_ndb_entity(entity)
+
+
+class NdbConnectionField(relay.ConnectionField):
+    @ndb.tasklet
+    def from_list(self, connection_type, resolved, args, info):
+        if isinstance(resolved, ndb.Future):
+            resolved = yield resolved
+
+        connection = super(NdbConnectionField, self).from_list(connection_type, resolved, args, info)
+        raise ndb.Return(connection)
