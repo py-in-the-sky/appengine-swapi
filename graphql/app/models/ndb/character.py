@@ -6,9 +6,6 @@ root = ndb.Key('CharacterRoot', 'character_root')
 
 
 class Character(ndb.Model):
-    _use_cache = False
-    _use_memcache = False
-
     name = ndb.StringProperty(required=True)
     description = ndb.TextProperty()
     faction_key = ndb.KeyProperty(required=True, kind='Faction')
