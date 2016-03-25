@@ -1,6 +1,8 @@
 from google.appengine.ext import ndb
 from google.appengine.ext.db import BadValueError
 
+from .utils import paginated_query
+
 
 root = ndb.Key('CharacterRoot', 'character_root')
 
@@ -13,39 +15,21 @@ class Character(ndb.Model):
     created = ndb.DateTimeProperty(required=True, auto_now_add=True)
     updated = ndb.DateTimeProperty(required=True, auto_now=True)
 
-    def get_friends(self):
+    @classmethod
+    def get_characters(cls, **kwargs):
+        "Return all characters in alphabetical order."
+        q = cls.query()
+        q_forward = q.order(cls.name)
+        q_backward = q.order(-cls.name)
+        return paginated_query(q_forward, q_backward, **kwargs)
+
+    def get_friends(self, **kwargs):
         "Return friends in alphabetical order."
         cls = self.__class__
-        q = cls.query(cls.friend_keys == self.key).order(cls.name)
-        return q.fetch_async()
-
-    @ndb.tasklet
-    def get_friends_of_friends(self):
-        """
-        Return friends of friends in alphabetical order.
-        Return value does not include self or friends.
-        """
-        if not self.friend_keys:
-            raise ndb.Return([])
-
-        cls = self.__class__
-        q = cls.query(cls.friend_keys.IN(self.friend_keys)).order(cls.name)
-        superset_keys = yield q.fetch_async(keys_only=True)
-        fof_keys = [k for k in superset_keys if k != self.key and k not in self.friend_keys]
-        # NB: For scalability, the keys of friends-of-friends for each character
-        # should be periodically calculated and stored in the datastore by a cron job.
-        # Then for an HTTP request by a user, the calculated value of the keys of
-        # friends-of-friends could just be fetched and then the actual entities
-        # retrieved in a batched get.
-        # For this example app, though, this scalability concern is not a central
-        # issue, so the app will be left to simply make this calculation in
-        # response to a user request.
-
-        if not fof_keys:
-            raise ndb.Return([])
-
-        friends_of_friends = yield ndb.get_multi_async(fof_keys)
-        raise ndb.Return(friends_of_friends)
+        q = cls.query(cls.friend_keys == self.key)
+        q_forward = q.order(cls.name)
+        q_backward = q.order(-cls.name)
+        return paginated_query(q_forward, q_backward, **kwargs)
 
     @classmethod
     def get_by_name(cls, name):

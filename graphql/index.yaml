@@ -17,5 +17,17 @@ indexes:
 
 - kind: Character
   properties:
+  - name: faction_key
+  - name: name
+    direction: desc
+
+- kind: Character
+  properties:
   - name: friend_keys
   - name: name
+
+- kind: Character
+  properties:
+  - name: friend_keys
+  - name: name
+    direction: desc
