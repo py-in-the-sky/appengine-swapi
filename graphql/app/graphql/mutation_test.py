@@ -57,18 +57,11 @@ def update_character_template():
 
 
 @pytest.fixture(scope='function')
-def friends_and_suggested_query():
+def friends_query():
     return '''
         query {
             character(name: "Rey") {
-                friends {
-                    edges {
-                        node {
-                            name
-                        }
-                    }
-                }
-                suggested {
+                friends(first: 100) {
                     edges {
                         node {
                             name
@@ -80,16 +73,15 @@ def friends_and_suggested_query():
     '''
 
 
-def test_create_friendship(rey, leia, create_friendship_template, friends_and_suggested_query):
+def test_create_friendship(rey, leia, create_friendship_template, friends_query):
     mutation = create_friendship_template % (rey.key.urlsafe(), leia.key.urlsafe())
 
     names = lambda field, result: [character['node']['name'] for character in result.data['character'][field]['edges']]
 
-    result = schema.execute(friends_and_suggested_query)
+    result = schema.execute(friends_query)
 
     assert not result.errors
     assert names('friends', result) == ['Finn', 'Han']
-    assert names('suggested', result) == ['Leia']
 
     result = schema.execute(mutation)
 
@@ -98,11 +90,10 @@ def test_create_friendship(rey, leia, create_friendship_template, friends_and_su
     assert result.data['createFriendship']['character1']['name'] == 'Rey'
     assert result.data['createFriendship']['character2']['name'] == 'Leia'
 
-    result = schema.execute(friends_and_suggested_query)
+    result = schema.execute(friends_query)
 
     assert not result.errors
     assert names('friends', result) == ['Finn', 'Han', 'Leia']
-    assert names('suggested', result) == []
 
 
 def test_create_friendship_failure(rey, finn, create_friendship_template):

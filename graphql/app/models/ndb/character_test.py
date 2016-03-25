@@ -10,47 +10,16 @@ def test_faction_key(rey):
 
 
 def test_get_friends(rey, leia):
-    friend_names = [f.name for f in rey.get_friends().get_result()]
+    friends, _ = rey.get_friends(first=200).get_result()
+    friend_names = [f.entity.name for f in friends]
 
     assert friend_names == ['Finn', 'Han']
 
     Character.create_friendship(rey.key, leia.key)
-    friend_names = [f.name for f in rey.get_friends().get_result()]
+    friends, _ = rey.get_friends(first=200).get_result()
+    friend_names = [f.entity.name for f in friends]
 
     assert friend_names == ['Finn', 'Han', 'Leia']
-
-
-def test_get_friends_of_friends(rey, leia, r2d2, han, chewie):
-    fof_names = lambda character: [fof.name for fof in character.get_friends_of_friends().get_result()]
-
-    _, r2d2 = Character.create_friendship(leia.key, r2d2.key)
-
-    assert fof_names(rey) == ['Leia']
-    assert rey.name not in fof_names(r2d2)
-
-    _, chewie = Character.create_friendship(han.key, chewie.key)
-
-    assert fof_names(rey) == ['Chewie', 'Leia']
-    assert rey.name in fof_names(chewie)
-
-    rey, _ = Character.create_friendship(rey.key, leia.key)
-
-    assert fof_names(rey) == ['Chewie', 'R2D2']
-    assert rey.name in fof_names(r2d2)
-    assert rey.name in fof_names(chewie)
-
-    # Section below illustrates how the query is dependent on the
-    # `friend_keys` property that's on the instance.
-    # See the `test_create_friendship` test below.
-
-    _, chewie = Character.create_friendship(rey.key, chewie.key)
-
-    assert rey.name not in fof_names(chewie)
-    assert chewie.name in fof_names(rey)
-
-    rey = rey.key.get()
-
-    assert chewie.name not in fof_names(rey)
 
 
 def test_ensure_name_not_in_datastore(fixtures):

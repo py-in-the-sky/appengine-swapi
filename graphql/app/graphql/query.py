@@ -15,21 +15,17 @@ class Character(relay.Node, NdbNodeMixin):
     updated = graphene.NonNull(DateTime)
     faction = graphene.NonNull('Faction')
     friends = NdbConnectionField('Character')
-    suggested = NdbConnectionField('Character')
 
     @ndb.tasklet
     def resolve_friends(self, args, info):
-        friends = yield self.key.get().get_friends()
-        raise ndb.Return([Character.from_ndb_entity(f) for f in friends])
-
-    @ndb.tasklet
-    def resolve_suggested(self, args, info):
-        suggested = yield self.key.get().get_friends_of_friends()
-        raise ndb.Return([Character.from_ndb_entity(s) for s in suggested])
+        character = self.key.get()
+        friends, page_info = yield character.get_friends(**args)
+        raise ndb.Return((friends, page_info, Character.from_ndb_entity))
 
     @ndb.tasklet
     def resolve_faction(self, args, info):
-        faction = yield self.key.get().faction_key.get_async()
+        character = self.key.get()
+        faction = yield character.faction_key.get_async()
         raise ndb.Return(Faction.from_ndb_entity(faction))
 
 
@@ -42,8 +38,9 @@ class Faction(relay.Node, NdbNodeMixin):
 
     @ndb.tasklet
     def resolve_characters(self, args, info):
-        characters = yield self.key.get().get_characters()
-        raise ndb.Return([Character.from_ndb_entity(c) for c in characters])
+        faction = self.key.get()
+        characters, page_info = yield faction.get_characters(**args)
+        raise ndb.Return((characters, page_info, Character.from_ndb_entity))
 
 
 class Query(graphene.ObjectType):
@@ -77,8 +74,8 @@ class Query(graphene.ObjectType):
 
     @ndb.tasklet
     def resolve_factions(self, args, info):
-        factions = yield NdbFaction.query().fetch_async()
-        raise ndb.Return([Faction.from_ndb_entity(f) for f in factions])
+        factions, page_info = yield NdbFaction.get_factions(**args)
+        raise ndb.Return((factions, page_info, Faction.from_ndb_entity))
 
     @ndb.tasklet
     def resolve_character(self, args, info):
@@ -96,5 +93,5 @@ class Query(graphene.ObjectType):
 
     @ndb.tasklet
     def resolve_characters(self, args, info):
-        characters = yield NdbCharacter.query().fetch_async()
-        raise ndb.Return([Character.from_ndb_entity(c) for c in characters])
+        characters, page_info = yield NdbCharacter.get_characters(**args)
+        raise ndb.Return((characters, page_info, Character.from_ndb_entity))

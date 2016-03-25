@@ -96,7 +96,7 @@ def test_query_complex(fixtures):
         query {
             faction(name: "The First Order") {
                 name
-                characters {
+                characters(first: 200) {
                     edges {
                         node {
                             name
@@ -124,11 +124,11 @@ def test_query_complex(fixtures):
         query {
             faction(name: "The Resistance") {
                 name
-                characters {
+                characters(first: 200) {
                     edges {
                         node {
                             name
-                            suggested {
+                            friends(first: 1, reverse: true) {
                                 edges {
                                     node {
                                         name
@@ -154,35 +154,8 @@ def test_query_complex(fixtures):
                     {
                         "node": {
                             "name": "Finn",
-                            "suggested": {
+                            "friends": {
                                 "edges": [
-                                    {
-                                        "node": {
-                                            "name": "Leia",
-                                            "faction": { "name": "The Resistance" }
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    },
-                    {
-                        "node": {
-                            "name": "Han",
-                            "suggested": { "edges": [] }
-                        }
-                    },
-                    {
-                        "node": {
-                            "name": "Leia",
-                            "suggested": {
-                                "edges": [
-                                    {
-                                        "node": {
-                                            "name": "Finn",
-                                            "faction": { "name": "The Resistance" }
-                                        }
-                                    },
                                     {
                                         "node": {
                                             "name": "Rey",
@@ -195,12 +168,42 @@ def test_query_complex(fixtures):
                     },
                     {
                         "node": {
-                            "name": "Rey",
-                            "suggested": {
+                            "name": "Han",
+                            "friends": {
                                 "edges": [
                                     {
                                         "node": {
-                                            "name": "Leia",
+                                            "name": "Rey",
+                                            "faction": { "name": "The Resistance" }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "node": {
+                            "name": "Leia",
+                            "friends": {
+                                "edges": [
+                                    {
+                                        "node": {
+                                            "name": "Han",
+                                            "faction": { "name": "The Resistance" }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        "node": {
+                            "name": "Rey",
+                            "friends": {
+                                "edges": [
+                                    {
+                                        "node": {
+                                            "name": "Han",
                                             "faction": { "name": "The Resistance" }
                                         }
                                     }

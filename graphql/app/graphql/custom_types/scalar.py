@@ -3,6 +3,7 @@ import datetime
 from graphene.core.classtypes import Scalar
 from graphql.core.language import ast
 from google.appengine.ext import ndb
+from google.appengine.datastore import datastore_query
 
 
 class DateTime(Scalar):
@@ -36,3 +37,19 @@ class NdbKey(Scalar):
     @staticmethod
     def parse_value(value):
         return ndb.Key(urlsafe=value)
+
+
+class NdbCursor(Scalar):
+    "NdbCursor"
+    @staticmethod
+    def serialize(cursor):
+        return cursor.urlsafe()
+
+    @staticmethod
+    def parse_literal(node):
+        if isinstance(node, ast.StringValue):
+            return datastore_query.Cursor(urlsafe=node.value)
+
+    @staticmethod
+    def parse_value(value):
+        return datastore_query.Cursor(urlsafe=value)
